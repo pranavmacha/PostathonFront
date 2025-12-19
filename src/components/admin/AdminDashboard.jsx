@@ -1,12 +1,64 @@
-import React, { useState } from 'react';
-import { MOCK_COMPLAINTS, getStatusColor } from '../../data/mockData';
-import { Clock, Filter, AlertCircle, CheckCircle, MessageSquare, Send, ChevronLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { apiService } from '../../api';
+import { Clock, Filter, AlertCircle, CheckCircle, MessageSquare, Send, ChevronLeft, Loader2 } from 'lucide-react';
 
 export default function AdminDashboard({ department, onLogout }) {
+    const [complaints, setComplaints] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [selectedSlot, setSelectedSlot] = useState(null); // { hour: string, color: string, complaints: Complaint[] }
     const [selectedComplaint, setSelectedComplaint] = useState(null);
+    const [replyText, setReplyText] = useState("");
+    const [isSending, setIsSending] = useState(false);
 
-    const filteredComplaints = MOCK_COMPLAINTS.filter(c => c.department === department);
+    useEffect(() => {
+        fetchComplaints();
+    }, [department]);
+
+    const fetchComplaints = async () => {
+        setIsLoading(true);
+        try {
+            const data = await apiService.getAdminComplaints(department);
+            // Map backend fields to frontend expected fields if necessary
+            const mappedData = data.map(c => ({
+                id: c.id,
+                title: c.title,
+                description: c.description,
+                user: c.user_name,
+                timestamp: c.timestamp,
+                status: c.status,
+                suggestedReply: c.admin_reply || "Hello, we have received your complaint regarding '" + c.title + "'. Our team is looking into it and will resolve it shortly."
+            }));
+            setComplaints(mappedData);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleSendReply = async () => {
+        if (!selectedComplaint) return;
+        setIsSending(true);
+        try {
+            await apiService.sendReply(selectedComplaint.id, replyText);
+            setReplyText("");
+            setSelectedComplaint(null);
+            fetchComplaints(); // Refresh list
+        } catch (error) {
+            alert("Failed to send reply.");
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    // Helper to get status color (moved from mockData utility for self-containment)
+    const getStatusColorFromTime = (timestamp, currentStatus) => {
+        if (currentStatus === 'green') return 'green';
+        const diff = (new Date() - new Date(timestamp)) / (1000 * 60 * 60);
+        if (diff < 1) return 'red';
+        if (diff < 24) return 'yellow';
+        return 'green';
+    };
 
     // Group by hour
     const hours = Array.from({ length: 24 }, (_, i) => {
@@ -18,9 +70,7 @@ export default function AdminDashboard({ department, onLogout }) {
     }).reverse();
 
     const getHourlyStats = (hourLabel) => {
-        // In a real app, this would filter by the actual timestamp match to the label
-        // For demo, we'll assign our mock data to specific labels
-        const slotComplaints = filteredComplaints.filter(c => {
+        const slotComplaints = complaints.filter(c => {
             const h = new Date(c.timestamp).getHours();
             const period = h < 12 ? 'AM' : 'PM';
             const displayH = h % 12 === 0 ? 12 : h % 12;
@@ -30,16 +80,13 @@ export default function AdminDashboard({ department, onLogout }) {
             return label === hourLabel;
         });
 
-        const redCount = slotComplaints.filter(c => getStatusColor(c.timestamp) === 'red').length;
-        const yellowCount = slotComplaints.filter(c => getStatusColor(c.timestamp) === 'yellow').length;
-        const greenCount = slotComplaints.filter(c => getStatusColor(c.timestamp) === 'green').length;
+        const redCount = slotComplaints.filter(c => getStatusColorFromTime(c.timestamp, c.status) === 'red').length;
+        const yellowCount = slotComplaints.filter(c => getStatusColorFromTime(c.timestamp, c.status) === 'yellow').length;
+        const greenCount = slotComplaints.filter(c => getStatusColorFromTime(c.timestamp, c.status) === 'green').length;
 
         let overallStatus = 'green';
-        if (redCount > 0) {
-            overallStatus = 'red';
-        } else if (yellowCount > 0) {
-            overallStatus = 'yellow';
-        }
+        if (redCount > 0) overallStatus = 'red';
+        else if (yellowCount > 0) overallStatus = 'yellow';
 
         return {
             red: redCount,
@@ -50,6 +97,14 @@ export default function AdminDashboard({ department, onLogout }) {
             complaints: slotComplaints
         };
     };
+
+    if (isLoading) {
+        return (
+            <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+                <Loader2 size={48} className="animate-spin" color="var(--primary)" />
+            </div>
+        );
+    }
 
     if (selectedComplaint) {
         return (
@@ -64,43 +119,42 @@ export default function AdminDashboard({ department, onLogout }) {
                             <span style={{
                                 padding: '0.25rem 0.75rem',
                                 borderRadius: '999px',
-                                background: `var(--status-${getStatusColor(selectedComplaint.timestamp)})`,
+                                background: `var(--status-${getStatusColorFromTime(selectedComplaint.timestamp, selectedComplaint.status)})`,
                                 fontSize: '0.75rem',
                                 fontWeight: '700',
                                 textTransform: 'uppercase'
-                            }}>{getStatusColor(selectedComplaint.timestamp)} Priority</span>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>ID: #29384</span>
+                            }}>{getStatusColorFromTime(selectedComplaint.timestamp, selectedComplaint.status)} Priority</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>ID: #PH-X{selectedComplaint.id}</span>
                         </div>
 
                         <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{selectedComplaint.title}</h3>
                         <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Submitted by <strong>{selectedComplaint.user}</strong> • {new Date(selectedComplaint.timestamp).toLocaleString()}</p>
 
-                        <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
-                            <p>{selectedComplaint.description}</p>
+                        <div style={{ padding: '2rem', background: 'rgba(255,255,255,0.05)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
+                            <p style={{ fontSize: '1.1rem', lineHeight: '1.6' }}>{selectedComplaint.description}</p>
                         </div>
                     </div>
 
                     <div className="card glass-morphism" style={{ border: '1px solid var(--primary)' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
                             <MessageSquare size={24} color="var(--primary)" />
-                            <h4 style={{ fontSize: '1.25rem' }}>Suggested Reply</h4>
+                            <h4 style={{ fontSize: '1.25rem' }}>Response Management</h4>
                         </div>
 
                         <div className="input-group">
-                            <label className="input-label">System Generated Response</label>
+                            <label className="input-label">Admin Official Reply</label>
                             <textarea
                                 className="input-field"
-                                rows="6"
-                                defaultValue={selectedComplaint.suggestedReply}
-                                style={{ background: 'rgba(255,255,255,0.05)', borderStyle: 'dashed' }}
+                                rows="8"
+                                placeholder="Type your response here..."
+                                value={replyText || selectedComplaint.suggestedReply}
+                                onChange={(e) => setReplyText(e.target.value)}
+                                style={{ background: 'rgba(255,255,255,0.05)' }}
                             ></textarea>
                         </div>
 
-                        <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => {
-                            alert('Response sent to user!');
-                            setSelectedComplaint(null);
-                        }}>
-                            <Send size={18} /> Send Response
+                        <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleSendReply} disabled={isSending}>
+                            {isSending ? <Loader2 className="animate-spin" size={18} /> : <><Send size={18} /> Send Response</>}
                         </button>
                     </div>
                 </div>
@@ -109,7 +163,7 @@ export default function AdminDashboard({ department, onLogout }) {
     }
 
     if (selectedSlot) {
-        const list = selectedSlot.complaints.filter(c => getStatusColor(c.timestamp) === selectedSlot.color);
+        const list = selectedSlot.complaints.filter(c => getStatusColorFromTime(c.timestamp, c.status) === selectedSlot.color);
         return (
             <div className="container animate-fade-in">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>

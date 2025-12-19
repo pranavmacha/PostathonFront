@@ -1,28 +1,42 @@
 import React, { useState } from 'react';
 import { Send, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { DEPARTMENTS } from '../../data/mockData';
+import { apiService } from '../../api';
 
 export default function UserComplaintForm({ onBack }) {
-    const [submitted, setSubmitted] = useState(false);
-    const [formData, setFormData] = useState({
-        title: '',
-        description: ''
-    });
+    const [formData, setFormData] = useState({ title: '', description: '' });
+    const [isSubmitted, setIsSubmitted] = useState(false);
+    const [trackingId, setTrackingId] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setSubmitted(true);
+        setIsLoading(true);
+        try {
+            const result = await apiService.submitComplaint({
+                ...formData,
+                user_name: "John Doe" // Placeholder
+            });
+            // The backend returns an integer ID, we format it here
+            setTrackingId(`PH-X${result.id}`);
+            setIsSubmitted(true);
+        } catch (error) {
+            console.error(error);
+            alert("Connection error. Is the backend running at localhost:8000?");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    if (submitted) {
+    if (isSubmitted) {
         return (
             <div className="container animate-fade-in" style={{ textAlign: 'center', paddingTop: '4rem' }}>
                 <div className="card glass-morphism" style={{ maxWidth: '500px', margin: '0 auto' }}>
                     <CheckCircle2 size={64} color="var(--status-green)" style={{ marginBottom: '1.5rem' }} />
                     <h2 style={{ marginBottom: '1rem' }}>Complaint Received!</h2>
                     <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-                        Your complaint has been logged and assigned a tracking ID #ORD-{Math.floor(Math.random() * 10000)}.
-                        You will receive updates directly in your portal.
+                        Your complaint has been logged and assigned a tracking ID <strong>#{trackingId}</strong>.
+                        It has been automatically routed to the correct department for resolution.
                     </p>
                     <button onClick={onBack} className="btn btn-primary">
                         Back to Home
@@ -65,6 +79,7 @@ export default function UserComplaintForm({ onBack }) {
                                 required
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                disabled={isLoading}
                             />
                         </div>
 
@@ -77,11 +92,14 @@ export default function UserComplaintForm({ onBack }) {
                                 required
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                disabled={isLoading}
                             ></textarea>
                         </div>
 
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
-                            <Send size={18} /> Submit Complaint
+                        <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1rem' }} disabled={isLoading}>
+                            {isLoading ? "Submitting..." : (
+                                <><Send size={18} /> Submit Complaint</>
+                            )}
                         </button>
                     </form>
                 </div>
