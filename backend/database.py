@@ -24,7 +24,7 @@ class Complaint(Base):
     description = Column(Text, nullable=False)
     department = Column(String(100), nullable=False)
     status = Column(String(20), default="red") # red, yellow, green
-    timestamp = Column(DateTime, default=datetime.utcnow)
+    timestamp = Column(DateTime, default=datetime.now)  # Use local time instead of UTC
     admin_reply = Column(Text, nullable=True)
 
 # Create tables
