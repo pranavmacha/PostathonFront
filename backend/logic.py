@@ -51,14 +51,32 @@ def classify_complaint(description: str):
     if model:
         try:
             prediction = model.predict([description])[0]
-            return prediction
+            
+            # Map detailed categories to Frontend Departments
+            mapping = {
+                "Delivery Delay": "Post Related Issues",
+                "Lost Parcel": "Post Related Issues",
+                "Damaged Item": "Post Related Issues",
+                "Wrong Delivery": "Post Related Issues",
+                "Staff Behavior": "Post Related Issues",
+                "Appreciation": "Post Related Issues",
+                "Tracking Issue": "Post Related Issues",
+                
+                "Refund / Compensation": "Finance",
+                
+                "Technical Issue": "Software Issues"
+            }
+            
+            # Return the mapped department, or default to "Post Related Issues" if unknown
+            return mapping.get(prediction, "Post Related Issues")
+            
         except Exception as e:
             print(f"Prediction error: {e}")
-            return "Uncategorized"
+            return "Post Related Issues" # Default fallback
     else:
         # Fallback if model failed to load
         print("Model not loaded, using fallback.")
-        return "Uncategorized"
+        return "Post Related Issues"
 
 def get_priority(description: str):
     """
