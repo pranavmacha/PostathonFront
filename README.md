@@ -1,16 +1,88 @@
-# React + Vite
+# PostHub - Complaint Management System
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A full-stack complaint management system with ML-powered classification, sentiment analysis, and admin dashboard.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- 🤖 **ML Classification** - Automatic complaint categorization using trained model
+- 📊 **Sentiment Analysis** - Priority assignment (Red/Yellow/Green) based on urgency
+- ⏰ **Hourly Tracking** - View complaints organized by time slots
+- 👨‍💼 **Admin Dashboard** - Department-wise complaint management
+- 💬 **Template Responses** - Professional reply suggestions
+- 📱 **Responsive UI** - Modern glassmorphism design
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Backend:**
+- FastAPI (Python)
+- SQLAlchemy (ORM)
+- PostgreSQL / SQLite
+- Scikit-learn (ML)
+- NLTK (Sentiment Analysis)
 
-## Expanding the ESLint configuration
+**Frontend:**
+- React
+- Vite
+- Modern CSS with glassmorphism
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Local Development
+
+### Backend Setup
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py
+```
+Backend runs on `http://localhost:8000`
+
+### Frontend Setup
+```bash
+npm install
+npm run dev
+```
+Frontend runs on `http://localhost:5173`
+
+## Deployment
+
+See `implementation_plan.md` in the artifacts folder for detailed Render deployment instructions.
+
+### Quick Deploy to Render
+1. Push to GitHub
+2. Import repository in Render
+3. Use the included `render.yaml` for automatic configuration
+4. Add PostgreSQL database
+5. Deploy!
+
+## Project Structure
+
+```
+PostathonF/
+├── backend/
+│   ├── main.py           # FastAPI app
+│   ├── database.py       # Database models
+│   ├── logic.py          # ML & business logic
+│   └── requirements.txt  # Python dependencies
+├── src/
+│   ├── components/       # React components
+│   ├── api.js           # API service
+│   └── App.jsx          # Main app
+├── complaint_ml/
+│   ├── complaint_classifier.pkl  # Trained ML model
+│   └── complaints_data.csv       # Training data
+└── render.yaml          # Render deployment config
+```
+
+## ML Model
+
+The system uses a trained classifier that categorizes complaints into:
+- Post Related Issues
+- Finance
+- Software Issues
+
+Priority is assigned based on:
+- Sentiment analysis (VADER)
+- Keyword detection (urgent, emergency, lost, etc.)
+
+## License
+
+MIT

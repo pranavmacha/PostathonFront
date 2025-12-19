@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: posthub-backend
+    env: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: posthub-db
+          property: connectionString
+
+  - type: web
+    name: posthub-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://posthub-backend.onrender.com
+
+databases:
+  - name: posthub-db
+    databaseName: posthub
+    user: posthub_user
