@@ -7,11 +7,9 @@ from datetime import datetime
 try:
     from .database import get_db, Complaint
     from .logic import classify_complaint, get_priority, get_hourly_stats, load_model
-    from .ai_reply import generate_ai_reply
 except ImportError:
     from database import get_db, Complaint
     from logic import classify_complaint, get_priority, get_hourly_stats, load_model
-    from ai_reply import generate_ai_reply
 
 from pydantic import BaseModel
 
@@ -108,19 +106,11 @@ def update_complaint_reply(complaint_id: int, reply: str, db: Session = Depends(
         raise HTTPException(status_code=404, detail="Complaint not found")
     
     db_complaint.admin_reply = reply
-    db_complaint.status = "green" # Marking as resolved
+    # Mark as closed so it disappears from dashboard
+    db_complaint.status = "closed"
     db.commit()
     db.refresh(db_complaint)
     return db_complaint
-
-@app.get("/api/admin/suggest-reply/{complaint_id}")
-def suggest_reply(complaint_id: int, db: Session = Depends(get_db)):
-    db_complaint = db.query(Complaint).filter(Complaint.id == complaint_id).first()
-    if not db_complaint:
-        raise HTTPException(status_code=404, detail="Complaint not found")
-    
-    reply = generate_ai_reply(db_complaint)
-    return {"suggested_reply": reply}
 
 if __name__ == "__main__":
     import uvicorn

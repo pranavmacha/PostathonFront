@@ -18,34 +18,15 @@ export default function AdminDashboard({ department, onLogout }) {
         setIsLoading(true);
         try {
             const data = await apiService.getHourlyStats(department);
-            // Verify data structure, backend returns list of HourlySlot
-            // { hour_label, red, yellow, green, status, count, complaints: [...] }
-            // Suggest reply is not in backend model, adding frontend side or backend?
-            // Backend maps `admin_reply` in `complaints` list.
-            // But we need `suggestedReply` for the UI.
 
-            const processedSlots = await Promise.all(data.map(async slot => ({
+            const processedSlots = data.map(slot => ({
                 ...slot,
-                complaints: await Promise.all(slot.complaints.map(async c => {
-                    let suggestion = c.admin_reply;
-
-                    if (!suggestion) {
-                        try {
-                            const res = await apiService.getSuggestedReply(c.id);
-                            suggestion = res.suggested_reply;
-                        } catch (err) {
-                            console.error("Failed to fetch AI reply", err);
-                            suggestion = "Error generating suggestion.";
-                        }
-                    }
-
-                    return {
-                        ...c,
-                        user: c.user_name,
-                        suggestedReply: suggestion
-                    };
+                complaints: slot.complaints.map(c => ({
+                    ...c,
+                    user: c.user_name,
+                    suggestedReply: c.admin_reply || `Hello, we have received your complaint regarding '${c.title}'. Our team is looking into it.`
                 }))
-            })));
+            }));
 
             setHourlySlots(processedSlots);
         } catch (error) {
@@ -56,11 +37,6 @@ export default function AdminDashboard({ department, onLogout }) {
     };
 
     const generateSuggestedReply = (c) => {
-        if (c.department === "Weather & Traffic") {
-            return "We are currently experiencing delays due to external factors (weather/traffic).";
-        } else if (c.department === "Logistics") {
-            return "There is a logistics delay at our sorting facility.";
-        }
         return `Hello, we have received your complaint regarding '${c.title}'. Our team is looking into it.`;
     };
 

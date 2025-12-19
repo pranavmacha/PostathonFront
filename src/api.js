@@ -43,12 +43,5 @@ export const apiService = {
         });
         if (!response.ok) throw new Error("Failed to send reply");
         return response.json();
-    },
-
-    // Get AI suggested reply
-    getSuggestedReply: async (complaintId) => {
-        const response = await fetch(`${API_BASE_URL}/admin/suggest-reply/${complaintId}`);
-        if (!response.ok) throw new Error("Failed to fetch suggested reply");
-        return response.json();
     }
 };

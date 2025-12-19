@@ -108,10 +108,13 @@ def get_hourly_stats(complaints: list):
     """
     slots = []
     
-    # Bucket complaints
+    # Bucket complaints (exclude closed ones)
     buckets = {i: [] for i in range(24)}
     
     for c in complaints:
+        # Skip closed complaints - they've been fully resolved
+        if hasattr(c, 'status') and c.status == "closed":
+            continue
         if hasattr(c, 'timestamp'):
             h = c.timestamp.hour
             buckets[h].append(c)
