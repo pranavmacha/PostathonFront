@@ -4,8 +4,13 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
 
-from .database import get_db, Complaint
-from .logic import classify_complaint, get_priority
+try:
+    from .database import get_db, Complaint
+    from .logic import classify_complaint, get_priority, get_hourly_stats
+except ImportError:
+    from database import get_db, Complaint
+    from logic import classify_complaint, get_priority, get_hourly_stats
+
 from pydantic import BaseModel
 
 app = FastAPI(title="PostHub Backend")
@@ -75,7 +80,7 @@ def get_complaints(department: str = None, db: Session = Depends(get_db)):
 
 @app.get("/api/admin/hourly-stats", response_model=List[HourlySlot])
 def get_hourly_stats_endpoint(department: str = None, db: Session = Depends(get_db)):
-    from .logic import get_hourly_stats
+    # from .logic import get_hourly_stats  <-- Removed, using global import check
     
     query = db.query(Complaint)
     if department:
