@@ -24,14 +24,28 @@ export default function AdminDashboard({ department, onLogout }) {
             // Backend maps `admin_reply` in `complaints` list.
             // But we need `suggestedReply` for the UI.
 
-            const processedSlots = data.map(slot => ({
+            const processedSlots = await Promise.all(data.map(async slot => ({
                 ...slot,
-                complaints: slot.complaints.map(c => ({
-                    ...c,
-                    user: c.user_name, // Map backend user_name to frontend user
-                    suggestedReply: c.admin_reply || generateSuggestedReply(c)
+                complaints: await Promise.all(slot.complaints.map(async c => {
+                    let suggestion = c.admin_reply;
+
+                    if (!suggestion) {
+                        try {
+                            const res = await apiService.getSuggestedReply(c.id);
+                            suggestion = res.suggested_reply;
+                        } catch (err) {
+                            console.error("Failed to fetch AI reply", err);
+                            suggestion = "Error generating suggestion.";
+                        }
+                    }
+
+                    return {
+                        ...c,
+                        user: c.user_name,
+                        suggestedReply: suggestion
+                    };
                 }))
-            }));
+            })));
 
             setHourlySlots(processedSlots);
         } catch (error) {
