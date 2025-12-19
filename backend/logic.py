@@ -2,6 +2,17 @@ import os
 import pickle
 import pandas as pd
 from datetime import datetime
+import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+
+# Download VADER lexicon if not present
+try:
+    nltk.data.find('sentiment/vader_lexicon.zip')
+except LookupError:
+    nltk.download('vader_lexicon')
+
+# Initialize sentiment analyzer
+sia = SentimentIntensityAnalyzer()
 
 # Global model variable
 model = None
@@ -14,12 +25,20 @@ def load_model():
         base_dir = os.path.dirname(os.path.abspath(__file__))
         model_path = os.path.join(base_dir, "..", "complaint_ml", "complaint_classifier.pkl")
         
+        if not os.path.exists(model_path):
+            print(f"[WARNING] Model file not found at {model_path}")
+            print("[INFO] To fix this, run: python complaint_ml/train_model.py")
+            model = None
+            return False
+        
         with open(model_path, 'rb') as f:
             model = pickle.load(f)
-        print(f"Model loaded successfully from {model_path}")
+        print(f"[SUCCESS] Model loaded successfully from {model_path}")
+        return True
     except Exception as e:
-        print(f"Error loading model: {e}")
+        print(f"[ERROR] Error loading model: {e}")
         model = None
+        return False
 
 # Load model on start
 load_model()
@@ -43,15 +62,26 @@ def classify_complaint(description: str):
 
 def get_priority(description: str):
     """
-    Assigns initial priority based on certain 'urgent' keywords.
+    Assigns priority based on keywords AND sentiment analysis.
+    Returns: "red" (urgent), "yellow" (medium), or "green" (low)
     """
     desc = description.lower()
     urgent_keywords = ["urgent", "emergency", "lost", "stolen", "immediately", "damages", "critical", "failed"]
     
-    if any(k in desc for k in urgent_keywords):
+    # Analyze sentiment
+    sentiment_score = sia.polarity_scores(description)["compound"]
+    
+    # Logic: Urgent keywords OR very negative sentiment → Red
+    if any(k in desc for k in urgent_keywords) or sentiment_score < -0.5:
         return "red"
     
-    return "yellow" if len(desc) > 50 else "red"
+    # Moderate negative sentiment → Yellow
+    elif sentiment_score < -0.2 or len(desc) > 100:
+        return "yellow"
+    
+    # Positive or neutral → Green
+    else:
+        return "green"
 
 def get_hourly_stats(complaints: list):
     """
@@ -65,8 +95,8 @@ def get_hourly_stats(complaints: list):
     
     for c in complaints:
         if hasattr(c, 'timestamp'):
-             h = c.timestamp.hour
-             buckets[h].append(c)
+            h = c.timestamp.hour
+            buckets[h].append(c)
     
     # Create stats for each hour 0-23
     for i in range(24):

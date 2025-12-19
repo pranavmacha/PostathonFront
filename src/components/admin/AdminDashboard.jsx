@@ -54,10 +54,12 @@ export default function AdminDashboard({ department, onLogout }) {
         if (!selectedComplaint) return;
         setIsSending(true);
         try {
-            await apiService.sendReply(selectedComplaint.id, replyText);
+            const updatedComplaint = await apiService.sendReply(selectedComplaint.id, replyText);
             setReplyText("");
-            setSelectedComplaint(null);
-            fetchHourlyData(); // Refresh
+            // Update the selected complaint with the response from backend
+            setSelectedComplaint(updatedComplaint);
+            // Refresh hourly data to show status change
+            fetchHourlyData();
         } catch (error) {
             alert("Failed to send reply.");
         } finally {

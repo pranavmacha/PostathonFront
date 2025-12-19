@@ -6,14 +6,24 @@ from datetime import datetime
 
 try:
     from .database import get_db, Complaint
-    from .logic import classify_complaint, get_priority, get_hourly_stats
+    from .logic import classify_complaint, get_priority, get_hourly_stats, load_model
 except ImportError:
     from database import get_db, Complaint
-    from logic import classify_complaint, get_priority, get_hourly_stats
+    from logic import classify_complaint, get_priority, get_hourly_stats, load_model
 
 from pydantic import BaseModel
 
 app = FastAPI(title="PostHub Backend")
+
+# Startup validation
+@app.on_event("startup")
+async def startup_event():
+    print("[INFO] PostHub Backend Starting...")
+    model_loaded = load_model()
+    if not model_loaded:
+        print("[WARNING] Backend running without ML model classification!")
+        print("    All complaints will be categorized as 'Uncategorized'")
+    print("[SUCCESS] Backend Ready!")
 
 # Enable CORS for the frontend
 app.add_middleware(
@@ -98,7 +108,8 @@ def update_complaint_reply(complaint_id: int, reply: str, db: Session = Depends(
     db_complaint.admin_reply = reply
     db_complaint.status = "green" # Marking as resolved
     db.commit()
-    return {"message": "Reply sent and status updated to green"}
+    db.refresh(db_complaint)
+    return db_complaint
 
 if __name__ == "__main__":
     import uvicorn
