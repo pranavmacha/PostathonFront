@@ -38,6 +38,16 @@ class ComplaintResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class HourlySlot(BaseModel):
+    hour_label: str
+    red: int
+    yellow: int
+    green: int
+    status: str
+    count: int
+    complaints: List[ComplaintResponse]
+
+
 @app.post("/api/complaints", response_model=ComplaintResponse)
 def create_complaint(complaint: ComplaintCreate, db: Session = Depends(get_db)):
     # Run classification logic
@@ -62,6 +72,17 @@ def get_complaints(department: str = None, db: Session = Depends(get_db)):
     if department:
         query = query.filter(Complaint.department == department)
     return query.all()
+
+@app.get("/api/admin/hourly-stats", response_model=List[HourlySlot])
+def get_hourly_stats_endpoint(department: str = None, db: Session = Depends(get_db)):
+    from .logic import get_hourly_stats
+    
+    query = db.query(Complaint)
+    if department:
+        query = query.filter(Complaint.department == department)
+    
+    complaints = query.all()
+    return get_hourly_stats(complaints)
 
 @app.patch("/api/admin/complaints/{complaint_id}")
 def update_complaint_reply(complaint_id: int, reply: str, db: Session = Depends(get_db)):

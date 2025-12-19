@@ -25,6 +25,17 @@ export const apiService = {
         return response.json();
     },
 
+    // Get hourly stats
+    getHourlyStats: async (department = null) => {
+        let url = `${API_BASE_URL}/admin/hourly-stats`;
+        if (department) {
+            url += `?department=${encodeURIComponent(department)}`;
+        }
+        const response = await fetch(url);
+        if (!response.ok) throw new Error("Failed to fetch hourly stats");
+        return response.json();
+    },
+
     // Send admin reply
     sendReply: async (complaintId, reply) => {
         const response = await fetch(`${API_BASE_URL}/admin/complaints/${complaintId}?reply=${encodeURIComponent(reply)}`, {
