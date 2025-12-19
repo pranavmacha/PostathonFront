@@ -1,4 +1,5 @@
-const API_BASE_URL = "http://localhost:8000/api";
+// Use environment variable for production, fallback to deployed backend
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://posthub-bj50.onrender.com/api";
 
 export const apiService = {
     // Submit a new complaint
