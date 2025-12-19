@@ -20,13 +20,26 @@ model = None
 def load_model():
     global model
     try:
-        # Path to the model file relative to this file
-        # logic.py is in backend/, model is in complaint_ml/
+        # Path to the model file - works for both local and Render
         base_dir = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(base_dir, "..", "complaint_ml", "complaint_classifier.pkl")
         
-        if not os.path.exists(model_path):
-            print(f"[WARNING] Model file not found at {model_path}")
+        # Try multiple possible paths
+        possible_paths = [
+            os.path.join(base_dir, "..", "complaint_ml", "complaint_classifier.pkl"),  # Local
+            os.path.join(base_dir, "..", "..", "complaint_ml", "complaint_classifier.pkl"),  # Render
+            "complaint_ml/complaint_classifier.pkl",  # Relative from project root
+        ]
+        
+        model_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                model_path = path
+                break
+        
+        if not model_path:
+            print(f"[WARNING] Model file not found. Tried paths:")
+            for p in possible_paths:
+                print(f"  - {os.path.abspath(p)}")
             print("[INFO] To fix this, run: python complaint_ml/train_model.py")
             model = None
             return False
